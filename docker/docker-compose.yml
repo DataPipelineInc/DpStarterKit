@@ -1,0 +1,181 @@
+version: '2.1'
+services:
+  dashboard:
+    image: registry.datapipeline.com/dp-customer-dashboard:5.10.0-alpha.1-08f8b87
+    mem_limit: 250m
+    container_name: dashboard
+    restart: always
+    ports:
+      - "80:80"
+    environment:
+      - API_ROOT=http://外网地址:5000/v2
+      - LOCAL_FILE_ROOT_DATA_DIR=/data
+      - CLIENT_INC=datapipeline.staging
+
+  dp-thrall-mysql:
+    image: dp-thrall-mysql:0.2.0
+    mem_limit: 1g
+    container_name: dp-thrall-mysql
+    volumes:
+      - /thrallmysql:/var/lib/mysql
+    restart: always
+    environment:
+      - MYSQL_ROOT_PASSWORD=123456
+
+  dp-thrall-redis:
+    image: redis:4-alpine
+    container_name: dp-thrall-redis
+    volumes:
+      - /thrallmysql/redis:/data
+
+  dp-thrall-webservice:
+    image: dp-thrall-webservice:0.2.0
+    mem_limit: 2g
+    container_name: dp-thrall-webservice
+    restart: always
+    privileged: true
+    ports:
+      - "5000:8080"
+      - "5555:5005"
+    volumes:
+      - /log/dpthrall:/usr/local/tomcat/logs
+    environment:
+      - THRALL_SCHEMAREGISTRY_URL=schemaregistry:8082
+      - THRALL_MYSQL_ROOT_PWD=123456
+      - THRALL_MYSQL_HOST_NAME=jdbc:mysql://dp-thrall-mysql:3306/dp-thrall?useUnicode=true\&characterEncoding=utf8
+      - DP_ZOOKEEPER_ADDR=zookeeper:2181
+      - REDIS_HOST=dp-thrall-redis
+      - REDIS_PORT=6379
+      - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
+      - THRALL_ENVIRONMENT=prod
+      - THRALL_URL=http://47.94.247.64
+      - THRALL_CLIENT_INC=localtest
+      - JAVA_OPTS= -Xmx1g -Xms1g
+
+  zookeeper:
+    container_name: zookeeper
+    mem_limit: 600m
+    restart: always
+    image: dp_zookeeper
+    environment:
+      - ZOOKEEPER_CLIENT_PORT=2181
+      - KAFKA_OPTS=-Xmx500m -Xms500m
+
+  kafka:
+    container_name: kafka
+    mem_limit: 2g
+    restart: always
+    image: dp_kafka
+    depends_on:
+      - zookeeper
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092
+      - KAFKA_MESSAGE_MAX_BYTES=2000000
+      - KAFKA_FETCH_MESSAGE_MAX_BYTES=3000000
+      - KAFKA_REPLICA_FETCH_MAX_BYTES=3000000
+      - KAFKA_REBALANCE_BACKOFF_MS=60000
+
+  schema_registry:
+    container_name: schema_registry
+    mem_limit: 1g
+    restart: always
+    image: dp_schema_registry
+    depends_on:
+      - kafka
+      - zookeeper
+    environment:
+      - SCHEMA_REGISTRY_HOST_NAME=schema_registry
+      - SCHEMA_REGISTRY_KAFKASTORE_CONNECTION_URL=zookeeper:2181
+
+  sourcedp:
+    container_name: sourcedp
+    mem_limit: 2g
+    image: connect_source_dp
+    restart: always
+    ports:
+      - "5111:5005"
+    volumes:
+      - /log/source:/log
+    environment:
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - KAFKA_DEBUG=TRUE
+      - CONNECT_REST_ADVERTISED_HOST_NAME=0.0.0.0
+      - CONNECT_CONFIG_STORAGE_TOPIC=config_connect_source_dp
+      - CONNECT_OFFSET_STORAGE_TOPIC=offset_connect_source_dp
+      - CONNECT_STATUS_STORAGE_TOPIC=status_connect_source_dp
+      - CONNECT_GROUP_ID=group_connect_source_dp
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_KEY_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_VALUE_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://schema_registry:8081
+      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://schema_registry:8081
+      - DP_BACKEND_IP=dp-thrall-webservice:8080
+      - KAFKA_HEAP_OPTS=-Xmx2G -Xms2G
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+
+  sinkdp:
+    container_name: sinkdp
+    mem_limit: 2g
+    image: connect_sink_dp
+    ports:
+      - "8085:8083"
+      - "5008:5005"
+      - "9999:9999"
+    volumes:
+      - /log/sink:/log
+    environment:
+      - CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_STATUS_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR=1
+      - CONNECT_REST_ADVERTISED_HOST_NAME=0.0.0.0
+      - CONNECT_CONFIG_STORAGE_TOPIC=config_connect_sink_redshift
+      - CONNECT_OFFSET_STORAGE_TOPIC=offset_connect_sink_redshift
+      - CONNECT_STATUS_STORAGE_TOPIC=status_connect_sink_redshift
+      - CONNECT_GROUP_ID=group_connect_sink_redshift
+      - CONNECT_BOOTSTRAP_SERVERS=kafka:9092
+      - CONNECT_SESSION_TIMEOUT_MS=120000
+      - CONNECT_TASK_SHUTDOWN_GRACEFUL_TIMEOUT_MS=10000 # give enough time for graceful shutdown
+      - CONNECT_OFFSET_FLUSH_TIMEOUT_MS=10000
+      - CONNECT_KEY_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_VALUE_CONVERTER=io.confluent.connect.avro.AvroConverter
+      - CONNECT_INTERNAL_KEY_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_INTERNAL_VALUE_CONVERTER=org.apache.kafka.connect.json.JsonConverter
+      - CONNECT_KEY_CONVERTER_SCHEMA_REGISTRY_URL=http://schema_registry:8081
+      - CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL=http://schema_registry:8081
+      - DP_BACKEND_IP=dp-thrall-webservice:8080
+      - KAFKA_DEBUG=TRUE
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - KAFKA_HEAP_OPTS=-Xmx1G -Xms1G
+
+  manager:
+    container_name: manager
+    mem_limit: 500m
+    restart: always
+    image: manager_connector
+    ports:
+      - "2222:2222"
+      - "5222:5005"
+    volumes:
+      - /log/manager:/log
+    environment:
+      - KAFKA_ZOOKEEPER_CONNECT=zookeeper:2181
+      - SOURCE_MYSQL_HOST=sourcedp
+      - SOURCE_COUCHBASE_HOST=sourcedp
+      - SOURCE_ORACLE_HOST=sourcedp
+      - SOURCE_POSTGRES_HOST=sourcedp
+      - SOURCE_SQLSERVER_HOST=sourcedp
+      - SOURCE_FILESYSTEM_HOST=sourcedp
+      - SINK_MYSQL_HOST=sinkdp
+      - SINK_TIDB_HOST=sinkdp
+      - SINK_KAFKA08_HOST=sinkdp
+      - SINK_REDSHIFT_HOST=sinkdp
+      - SINK_ORCL_HOST=sinkdp
+      - KAFKA_CLUSTER_ADDRESSES=kafka:9092
+      - JAVA_OPTIONS=-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=5005
+      - MONGO_CLUSTER_MODE=true
+      - DP_BACKEND_IP=dp-thrall-webservice:8080
