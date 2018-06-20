@@ -147,7 +147,7 @@ Kafka Connect 通过开发者实现 `SinkConnector` 以及 `SinkTask` 来消费 
       MemoryBatchMessage loadMessage, String dpSchemaName, boolean shouldStageData)
       throws Exception;
 ```
-插入和更新 record 会调用此接口。`MemoryBatchMessage` 可以调用 getDpSinkRecords() 方法获取 被删除的 records map。以 primary key 为这个 map 的 key。`shouldStageData` 用于判断源表是否是无增量识别字段，是否应该先进入 staging 区域。对于这种无增量字段的源表，DataPipeline 的做法是定时做全量扫描，所以一般做法是将一次全量扫描的数据放到一个 staging 区域， 比如临时表，然后再做替换。
+插入和更新 record 会调用此接口。`MemoryBatchMessage` 可以调用 getDpSinkRecords() 方法获取 insert/update 的 records map。以 primary key 为这个 map 的 key。`shouldStageData` 用于判断源表是否是无增量识别字段，是否应该先进入 staging 区域。对于这种无增量字段的源表，DataPipeline 的做法是定时做全量扫描，所以一般做法是将一次全量扫描的数据放到一个 staging 区域， 比如临时表，然后再做替换。
 
 ### snapshot start
 ---
