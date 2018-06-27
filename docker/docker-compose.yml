@@ -17,7 +17,7 @@ services:
     mem_limit: 1g
     container_name: dp-thrall-mysql
     volumes:
-      - /thrallmysql:/var/lib/mysql
+      - /thrall/mysql:/var/lib/mysql
     restart: always
     environment:
       - MYSQL_ROOT_PASSWORD=123456
@@ -26,7 +26,13 @@ services:
     image: redis:4-alpine
     container_name: dp-thrall-redis
     volumes:
-      - /thrallmysql/redis:/data
+      - /thrall/redis:/data
+
+  dp-thrall-es:
+    container_name: dp-thrall-es
+    image: registry.datapipeline.com/dp-elasticsearch:5.5
+    volumes:
+      - /thrall/es:/usr/share/elasticsearch/data
 
   dp-thrall-webservice:
     image: dp-thrall-webservice:0.2.0
@@ -46,9 +52,10 @@ services:
       - DP_ZOOKEEPER_ADDR=zookeeper:2181
       - REDIS_HOST=dp-thrall-redis
       - REDIS_PORT=6379
+      - ES_NODES=dp-thrall-es:9300
       - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
       - THRALL_ENVIRONMENT=prod
-      - THRALL_URL=http://47.94.247.64
+      - THRALL_URL=http://外网地址
       - THRALL_CLIENT_INC=localtest
       - JAVA_OPTS= -Xmx1g -Xms1g
 
@@ -56,7 +63,7 @@ services:
     container_name: zookeeper
     mem_limit: 600m
     restart: always
-    image: dp_zookeeper
+    image: registry.datapipeline.com/dp_zookeeper:0.2.3
     environment:
       - ZOOKEEPER_CLIENT_PORT=2181
       - KAFKA_OPTS=-Xmx500m -Xms500m
@@ -65,7 +72,7 @@ services:
     container_name: kafka
     mem_limit: 2g
     restart: always
-    image: dp_kafka
+    image: registry.datapipeline.com/dp_kafka:0.2.4
     depends_on:
       - zookeeper
     environment:
@@ -80,7 +87,7 @@ services:
     container_name: schema_registry
     mem_limit: 1g
     restart: always
-    image: dp_schema_registry
+    image: registry.datapipeline.com/dp_schema_registry:0.2.3
     depends_on:
       - kafka
       - zookeeper
@@ -91,7 +98,7 @@ services:
   sourcedp:
     container_name: sourcedp
     mem_limit: 2g
-    image: connect_source_dp
+    image: registry.datapipeline.com/connect_source_dp:0.5.9-rc.6
     restart: always
     ports:
       - "5111:5005"
@@ -156,7 +163,7 @@ services:
     container_name: manager
     mem_limit: 500m
     restart: always
-    image: manager_connector
+    image: registry.datapipeline.com/manager_connector:0.5.9-rc.6
     ports:
       - "2222:2222"
       - "5222:5005"
