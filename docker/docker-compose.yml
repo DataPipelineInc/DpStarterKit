@@ -8,7 +8,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - API_ROOT=http://外网地址:5000/v2
+      - API_ROOT=http://${PUBLIC_IP}:5000/v2
       - LOCAL_FILE_ROOT_DATA_DIR=/data
       - CLIENT_INC=datapipeline.staging
 
@@ -16,6 +16,11 @@ services:
     image: dp-thrall-mysql:0.2.0
     mem_limit: 1g
     container_name: dp-thrall-mysql
+    healthcheck:
+          test: " mysqladmin ping -uroot -p123456"
+          interval: 10s
+          timeout: 5s
+          retries: 5
     volumes:
       - /thrall/mysql:/var/lib/mysql
     restart: always
@@ -25,11 +30,21 @@ services:
   dp-thrall-redis:
     image: redis:4-alpine
     container_name: dp-thrall-redis
+    healthcheck:
+          test: "nc -z localhost 6379"
+          interval: 10s
+          timeout: 5s
+          retries: 5
     volumes:
       - /thrall/redis:/data
 
   dp-thrall-es:
     container_name: dp-thrall-es
+    healthcheck:
+      test: "nc -z localhost 9200"
+      interval: 10s
+      timeout: 5s
+      retries: 5
     image: registry.datapipeline.com/dp-elasticsearch:5.5
     volumes:
       - /thrall/es:/usr/share/elasticsearch/data
@@ -43,8 +58,20 @@ services:
     ports:
       - "5000:8080"
       - "5555:5005"
+    depends_on:
+      dp-thrall-redis:
+        condition: service_healthy
+      dp-thrall-es:
+        condition: service_healthy
+      dp-thrall-mysql:
+        condition: service_healthy
     volumes:
       - /log/dpthrall:/usr/local/tomcat/logs
+    healthcheck:
+      test: "curl --fail http://localhost:8080 || exit 1"
+      interval: 20s
+      timeout: 5s
+      retries: 5
     environment:
       - THRALL_SCHEMAREGISTRY_URL=schemaregistry:8082
       - THRALL_MYSQL_ROOT_PWD=123456
@@ -55,7 +82,7 @@ services:
       - ES_NODES=dp-thrall-es:9300
       - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
       - THRALL_ENVIRONMENT=prod
-      - THRALL_URL=http://外网地址
+      - THRALL_URL=http://${PUBLIC_IP}
       - THRALL_CLIENT_INC=localtest
       - JAVA_OPTS= -Xmx1g -Xms1g
 
