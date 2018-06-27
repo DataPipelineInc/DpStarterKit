@@ -13,7 +13,7 @@ services:
       - CLIENT_INC=datapipeline.staging
 
   dp-thrall-mysql:
-    image: dp-thrall-mysql:0.2.0
+    image: registry.datapipeline.com/dp-thrall-mysql:0.5.1-rc.14
     mem_limit: 1g
     container_name: dp-thrall-mysql
     healthcheck:
@@ -39,7 +39,7 @@ services:
       - /thrall/redis:/data
 
   dp-thrall-es:
-    container_name: dp-thrall-es
+    container_name: registry.datapipeline.com/dp-elasticsearch:5.5
     healthcheck:
       test: "nc -z localhost 9200"
       interval: 10s
@@ -50,7 +50,7 @@ services:
       - /thrall/es:/usr/share/elasticsearch/data
 
   dp-thrall-webservice:
-    image: dp-thrall-webservice:0.2.0
+    image: registry.datapipeline.com/dp-thrall-webservice:0.5.1-rc.14
     mem_limit: 2g
     container_name: dp-thrall-webservice
     restart: always
