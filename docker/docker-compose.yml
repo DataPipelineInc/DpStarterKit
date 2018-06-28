@@ -1,7 +1,7 @@
 version: '2.1'
 services:
   dashboard:
-    image: registry.datapipeline.com/dp-customer-dashboard:5.10.0-alpha.1-08f8b87
+    image: reg.datapipeline.com/dp/dp-customer-dashboard:5.10.0-alpha.1-08f8b87
     mem_limit: 250m
     container_name: dashboard
     restart: always
@@ -13,7 +13,7 @@ services:
       - CLIENT_INC=datapipeline.staging
 
   dp-thrall-mysql:
-    image: registry.datapipeline.com/dp-thrall-mysql:0.5.1-rc.14
+    image: reg.datapipeline.com/dp/dp-thrall-mysql:0.5.1-rc.14
     mem_limit: 1g
     container_name: dp-thrall-mysql
     healthcheck:
@@ -39,18 +39,18 @@ services:
       - /thrall/redis:/data
 
   dp-thrall-es:
-    container_name: registry.datapipeline.com/dp-elasticsearch:5.5
+    container_name: dp-thrall-es
     healthcheck:
       test: "nc -z localhost 9200"
       interval: 10s
       timeout: 5s
       retries: 5
-    image: registry.datapipeline.com/dp-elasticsearch:5.5
+    image: reg.datapipeline.com/dp/dp-elasticsearch:5.5
     volumes:
       - /thrall/es:/usr/share/elasticsearch/data
 
   dp-thrall-webservice:
-    image: registry.datapipeline.com/dp-thrall-webservice:0.5.1-rc.14
+    image: reg.datapipeline.com/dp/dp-thrall-webservice:0.5.1-rc.14
     mem_limit: 2g
     container_name: dp-thrall-webservice
     restart: always
@@ -90,7 +90,7 @@ services:
     container_name: zookeeper
     mem_limit: 600m
     restart: always
-    image: registry.datapipeline.com/dp_zookeeper:0.2.3
+    image: reg.datapipeline.com/dp/dp_zookeeper:0.2.3
     environment:
       - ZOOKEEPER_CLIENT_PORT=2181
       - KAFKA_OPTS=-Xmx500m -Xms500m
@@ -99,7 +99,7 @@ services:
     container_name: kafka
     mem_limit: 2g
     restart: always
-    image: registry.datapipeline.com/dp_kafka:0.2.4
+    image: reg.datapipeline.com/dp/dp_kafka:0.2.4
     depends_on:
       - zookeeper
     environment:
@@ -114,7 +114,7 @@ services:
     container_name: schema_registry
     mem_limit: 1g
     restart: always
-    image: registry.datapipeline.com/dp_schema_registry:0.2.3
+    image: reg.datapipeline.com/dp/dp_schema_registry:0.2.3
     depends_on:
       - kafka
       - zookeeper
@@ -125,7 +125,7 @@ services:
   sourcedp:
     container_name: sourcedp
     mem_limit: 2g
-    image: registry.datapipeline.com/connect_source_dp:0.5.9-rc.6
+    image: reg.datapipeline.com/dp/connect_source_dp:0.5.9-rc.6
     restart: always
     ports:
       - "5111:5005"
@@ -190,7 +190,7 @@ services:
     container_name: manager
     mem_limit: 500m
     restart: always
-    image: registry.datapipeline.com/manager_connector:0.5.9-rc.6
+    image: reg.datapipeline.com/dp/manager_connector:0.5.9-rc.6
     ports:
       - "2222:2222"
       - "5222:5005"
