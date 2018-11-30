@@ -50,8 +50,7 @@ services:
     depends_on:
       dp-thrall-redis:
         condition: service_healthy
-      dp-thrall-es:
-        condition: service_healthy
+
       dp-thrall-mysql:
         condition: service_healthy
     volumes:
@@ -66,9 +65,9 @@ services:
       - THRALL_MYSQL_ROOT_PWD=123456
       - THRALL_MYSQL_HOST_NAME=jdbc:mysql://dp-thrall-mysql:3306/dp-thrall?useUnicode=true\&characterEncoding=utf8
       - DP_ZOOKEEPER_ADDR=zookeeper:2181
-      - REDIS_HOST=dp-thrall-redis22
+      - REDIS_HOST=dp-thrall-redis
       - REDIS_PORT=6379
-      - ES_NODES=dp-thrall-es:9300
+      - ES_NODES=dp-thrall-es2:9300
       - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
       - THRALL_ENVIRONMENT=prod
       - THRALL_URL=http://${PUBLIC_IP}
