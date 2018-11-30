@@ -84,7 +84,7 @@ services:
     image: registry.datapipeline.com/dp-elasticsearch:5.5
     volumes:
       - /thrall/es:/usr/share/elasticsearch/data
-      -
+
   zookeeper:
     container_name: zookeeper
     mem_limit: 600m
