@@ -67,7 +67,7 @@ services:
       - DP_ZOOKEEPER_ADDR=zookeeper:2181
       - REDIS_HOST=dp-thrall-redis
       - REDIS_PORT=6379
-      - ES_NODES=dp-thrall-es2:9300
+      - ES_NODES=dp-thrall-es:9300
       - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
       - THRALL_ENVIRONMENT=prod
       - THRALL_URL=http://${PUBLIC_IP}
