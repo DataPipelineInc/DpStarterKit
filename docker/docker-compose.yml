@@ -73,7 +73,18 @@ services:
       - THRALL_URL=http://${PUBLIC_IP}
       - THRALL_CLIENT_INC=localtest
       - JAVA_OPTS= -Xmx1g -Xms1g
-
+      -
+  dp-thrall-es:
+    container_name: dp-thrall-es
+    healthcheck:
+      test: "nc -z localhost 9200"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    image: registry.datapipeline.com/dp-elasticsearch:5.5
+    volumes:
+      - /thrall/es:/usr/share/elasticsearch/data
+      -
   zookeeper:
     container_name: zookeeper
     mem_limit: 600m
