@@ -8,10 +8,9 @@ import java.util.stream.Collectors;
 import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Field;
 
-public class ConsoleOutputSinkPipe extends DpSinkPipe {
+public class ConsoleOutputPipe extends DpSinkPipe {
   @Override
   public void init(Map<String, String> config) {
-    System.out.println("dptask#" + getContext().getDpTaskId() + " Pipe init.");
     config.forEach((k, v) -> System.out.println("Key: " + k + " / Value: " + v));
   }
 
