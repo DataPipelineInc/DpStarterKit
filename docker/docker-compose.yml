@@ -1,7 +1,7 @@
 version: '2.1'
 services:
   dashboard:
-    image: registry.datapipeline.com/dp-customer-dashboard:5.16.7-e322b7e
+    image: registry.datapipeline.com/dp-customer-dashboard:5.16.7-b3bf86f
     mem_limit: 250m
     container_name: dashboard
     restart: always
@@ -73,7 +73,7 @@ services:
       - THRALL_URL=http://${PUBLIC_IP}
       - THRALL_CLIENT_INC=localtest
       - JAVA_OPTS= -Xmx1g -Xms1g
-      -
+
   dp-thrall-es:
     container_name: dp-thrall-es
     healthcheck:
