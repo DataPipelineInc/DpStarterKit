@@ -1,7 +1,7 @@
 version: '2.1'
 services:
   dashboard:
-    image: reg.datapipeline.com/dp/dp-customer-dashboard:5.10.0-alpha.1-08f8b87
+    image: registry.datapipeline.com/dp-customer-dashboard:5.16.7-e322b7e
     mem_limit: 250m
     container_name: dashboard
     restart: always
@@ -13,7 +13,7 @@ services:
       - CLIENT_INC=datapipeline.staging
 
   dp-thrall-mysql:
-    image: reg.datapipeline.com/dp/dp-thrall-mysql:0.5.1-rc.14
+    image: registry.datapipeline.com/dp-thrall-mysql:0.8.20
     mem_limit: 1g
     container_name: dp-thrall-mysql
     healthcheck:
@@ -38,19 +38,8 @@ services:
     volumes:
       - /thrall/redis:/data
 
-  dp-thrall-es:
-    container_name: dp-thrall-es
-    healthcheck:
-      test: "nc -z localhost 9200"
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    image: reg.datapipeline.com/dp/dp-elasticsearch:5.5
-    volumes:
-      - /thrall/es:/usr/share/elasticsearch/data
-
   dp-thrall-webservice:
-    image: reg.datapipeline.com/dp/dp-thrall-webservice:0.5.1-rc.14
+    image: registry.datapipeline.com/dp-thrall-webservice:0.8.20
     mem_limit: 2g
     container_name: dp-thrall-webservice
     restart: always
@@ -77,7 +66,7 @@ services:
       - THRALL_MYSQL_ROOT_PWD=123456
       - THRALL_MYSQL_HOST_NAME=jdbc:mysql://dp-thrall-mysql:3306/dp-thrall?useUnicode=true\&characterEncoding=utf8
       - DP_ZOOKEEPER_ADDR=zookeeper:2181
-      - REDIS_HOST=dp-thrall-redis
+      - REDIS_HOST=dp-thrall-redis22
       - REDIS_PORT=6379
       - ES_NODES=dp-thrall-es:9300
       - CONNECTOR_MANAGER_SERVICE_URL=manager:2222
@@ -125,7 +114,7 @@ services:
   sourcedp:
     container_name: sourcedp
     mem_limit: 2g
-    image: reg.datapipeline.com/dp/connect_source_dp:0.5.9-rc.6
+    image: registry.datapipeline.com/connect_source_dp:0.8.26
     restart: always
     ports:
       - "5111:5005"
@@ -190,7 +179,7 @@ services:
     container_name: manager
     mem_limit: 500m
     restart: always
-    image: reg.datapipeline.com/dp/manager_connector:0.5.9-rc.6
+    image: reg.datapipeline.com/dp/manager_connector:0.8.26
     ports:
       - "2222:2222"
       - "5222:5005"
@@ -205,6 +194,7 @@ services:
       - SOURCE_SQLSERVER_HOST=sourcedp
       - SOURCE_FILESYSTEM_HOST=sourcedp
       - SINK_MYSQL_HOST=sinkdp
+      - SINK_STARTER_HOST=sinkdp
       - SINK_TIDB_HOST=sinkdp
       - SINK_KAFKA08_HOST=sinkdp
       - SINK_REDSHIFT_HOST=sinkdp
