@@ -9,6 +9,7 @@ import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Field;
 
 public class ConsoleOutputSinkPipe extends DpSinkPipe {
+
   @Override
   public void init(Map<String, String> config) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Pipe init.");
