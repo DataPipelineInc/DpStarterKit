@@ -8,7 +8,7 @@ import java.util.stream.Collectors;
 import org.apache.kafka.connect.data.ConnectSchema;
 import org.apache.kafka.connect.data.Field;
 
-public class ConsoleOutputPipe extends DpSinkPipe {
+public class ConsoleOutputSinkPipe extends DpSinkPipe {
   @Override
   public void init(Map<String, String> config) {
     config.forEach((k, v) -> System.out.println("Key: " + k + " / Value: " + v));
