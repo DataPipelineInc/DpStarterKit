@@ -4,37 +4,60 @@ import com.mongodb.MongoClientSettings;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.*;
 import org.bson.Document;
+
 import java.util.Arrays;
 
 public enum MongoDBHelper {
 
     INSTANCE;
 
-    private static MongoClient mongoClient;
+    private MongoClient mongoClient;
+
+    private String dataBaseName;
 
     /**
-     * 获取客户端连接
-     * @return
+     * Create Client Connection
+     * @param host ip address
+     * @param port ip port
      */
-    public void getMongoClient(String host, Integer port){
-        mongoClient = MongoClients.create(
-                MongoClientSettings.builder()
-                        /*.applyToConnectionPoolSettings(builder -> {
-
-                        })*/
-                        .applyToClusterSettings(builder ->
-                                builder.hosts(Arrays.asList(new ServerAddress(host, port))))
-                        .build());
+    public void createMongoClient(String dataBaseName, String host, Integer port){
+        try {
+            mongoClient = MongoClients.create(
+                    MongoClientSettings.builder().applyToConnectionPoolSettings(builder -> {
+                        builder.maxSize(1000);
+                    }).applyToClusterSettings(builder -> {
+                        builder.hosts(Arrays.asList(new ServerAddress(host, port)));
+                    }).build());
+            this.dataBaseName = dataBaseName;
+        }catch (Exception e){
+            throw new RuntimeException("创建mongoClient失败");
+        }
     }
 
     /**
-     * 获取数据库实例
-     * @param dbName
+     * Get Client Connection
      * @return
      */
-    public MongoDatabase getDB(String dbName) {
-        MongoDatabase database = mongoClient.getDatabase(dbName);
-        return database;
+    public MongoClient getMongoClient(){
+        return mongoClient;
+    }
+
+    /**
+     * get collection
+     * @param table table
+     * @return
+     */
+    public MongoCollection<Document> getCollection(String table){
+        return mongoClient.getDatabase(dataBaseName).getCollection(table);
+    }
+
+    /**
+     * close Client
+     */
+    public void closeMongoClient() {
+        if (null != mongoClient) {
+            mongoClient.close();
+        }
     }
 
 }

@@ -57,6 +57,10 @@
             <groupId>org.mongodb</groupId>
             <artifactId>mongo-java-driver</artifactId>
         </dependency>
+        <dependency>
+            <groupId>com.datapipeline</groupId>
+            <artifactId>dp-sink-connector</artifactId>
+        </dependency>
     </dependencies>
     <dependencyManagement>
         <dependencies>
@@ -70,6 +74,11 @@
                 <artifactId>mongo-java-driver</artifactId>
                 <version>3.9.1</version>
             </dependency>
+            <dependency>
+                <groupId>com.datapipeline</groupId>
+                <artifactId>dp-sink-connector</artifactId>
+                <version>0.8.5-SNAPSHOT</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
     <repositories>
@@ -80,6 +89,11 @@
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
+        </repository>
+        <repository>
+            <id>dp-public</id>
+            <name>dp public</name>
+            <url>http://registry.datapipeline.com:8081/nexus/content/groups/public/</url>
         </repository>
     </repositories>
 </project>
