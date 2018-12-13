@@ -90,7 +90,7 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Data insertion of " + dpSchemaName + ", should staging data ? " + shouldStageData);
     msg.getDpSinkRecords().values().forEach(dpSinkRecord -> System.out.println("Insert " + dpSinkRecord.getDataJson()));
     MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
-    List<WriteModel<Document>> requests = new ArrayList<>();
+    List<WriteModel<Document>> requests = new ArrayList<>(msg.getDpSinkRecords().size());
     msg.getDpSinkRecords().values().forEach(dpSinkRecord ->
       {
         try {
@@ -175,5 +175,6 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
         requests.add(iom);
       }
     }
+
   }
 }
