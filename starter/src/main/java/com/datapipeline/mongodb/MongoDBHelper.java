@@ -1,6 +1,7 @@
 package com.datapipeline.mongodb;
 
 import com.mongodb.MongoClientSettings;
+import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.*;
 import org.bson.Document;
@@ -22,12 +23,16 @@ public enum MongoDBHelper {
      */
     public void createMongoClient(String dataBaseName, String host, Integer port){
         try {
+            //MongoCredential credential = MongoCredential.createCredential(user, source, password);
             mongoClient = MongoClients.create(
                     MongoClientSettings.builder().applyToConnectionPoolSettings(builder -> {
+                        builder.minSize(100);
                         builder.maxSize(1000);
                     }).applyToClusterSettings(builder -> {
                         builder.hosts(Arrays.asList(new ServerAddress(host, port)));
-                    }).build());
+                    })
+                            //.credential(credential)
+                    .build());
             this.dataBaseName = dataBaseName;
         }catch (Exception e){
             throw new RuntimeException("创建mongoClient失败");

@@ -9,6 +9,7 @@ import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 import java.math.BigDecimal;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
@@ -57,8 +58,8 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
     System.out.println("New schema has fields as " + currSchema.fields().stream().map(Field::name).collect(Collectors.joining(", ")));
 
     if(null != lastSchema && null != currSchema){
-      String lastStr = lastSchema.fields().stream().map(Field::name).collect(Collectors.joining(", "));
-      String currStr = currSchema.fields().stream().map(Field::name).collect(Collectors.joining(", "));
+      String lastStr = lastSchema.fields().stream().map(Field::name).collect(Collectors.joining(","));
+      String currStr = currSchema.fields().stream().map(Field::name).collect(Collectors.joining(","));
       String[] lastStrArray = lastStr.split(",");
       String[] currStrArray = currStr.split(",");
       if(lastStrArray.length != currStrArray.length){
@@ -175,6 +176,5 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
         requests.add(iom);
       }
     }
-
   }
 }
