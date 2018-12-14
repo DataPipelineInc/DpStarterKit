@@ -1,7 +1,6 @@
 package com.datapipeline.mongodb;
 
 import com.mongodb.MongoClientSettings;
-import com.mongodb.MongoCredential;
 import com.mongodb.ServerAddress;
 import com.mongodb.client.*;
 import org.bson.Document;

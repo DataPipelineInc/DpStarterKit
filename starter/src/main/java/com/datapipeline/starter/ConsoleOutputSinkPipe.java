@@ -3,6 +3,7 @@ package com.datapipeline.starter;
 import com.datapipeline.base.connector.sink.pipe.message.MemoryBatchMessage;
 import com.datapipeline.clients.connector.schema.base.DpSinkRecord;
 import com.datapipeline.clients.connector.schema.base.PrimaryKey;
+import com.datapipeline.clients.record.DpRecordMessageType;
 import com.datapipeline.mongodb.MongoDBHelper;
 import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 
@@ -90,18 +91,36 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
   public void handleInsert(MemoryBatchMessage msg, String dpSchemaName, boolean shouldStageData) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Data insertion of " + dpSchemaName + ", should staging data ? " + shouldStageData);
     msg.getDpSinkRecords().values().forEach(dpSinkRecord -> System.out.println("Insert " + dpSinkRecord.getDataJson()));
+
+    // 得到mongodb集合
     MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
-    List<WriteModel<Document>> requests = new ArrayList<>(msg.getDpSinkRecords().size());
-    msg.getDpSinkRecords().values().forEach(dpSinkRecord ->
-      {
-        try {
-          getBatchData(dpSinkRecord, collection, requests);
-        } catch (JSONException e) {
-          throw new RuntimeException("Data type conversion error");
+    // 定义批量提交batchData
+    List<WriteModel<Document>> batchData = new ArrayList<>(msg.getDpSinkRecords().size());
+    // 获取数据类型（I:插入，U:更新）
+    String type = msg.getBatchMeta().getMessageType().getType();
+    // 循环放入批量提交集合requests
+    Collection<DpSinkRecord> dpSinkRecords = msg.getDpSinkRecords().values();
+    for (DpSinkRecord dpSinkRecord : dpSinkRecords) {
+      try {
+        PrimaryKey primaryKey = dpSinkRecord.getPrimaryKeys();
+        ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
+        JSONObject dataJson = dpSinkRecord.getDataJson();
+        // 数据去重
+        if (StringUtils.equals("I", type)) {
+          Document document = collection.find(eq(immutablePair.getKey(), immutablePair.getValue())).first();
+          if (null != document && document.size() > 0) {
+            continue;
+          }
         }
+        // 获取批量写入对象
+        WriteModel<Document> iom = getBatchData(type, immutablePair, dataJson);
+        batchData.add(iom);
+      } catch (JSONException e) {
+        throw new RuntimeException("Data type conversion error");
       }
-    );
-    BulkWriteResult bulkWriteResult = collection.bulkWrite(requests);
+    }
+    // 执行批量提交
+    BulkWriteResult bulkWriteResult = collection.bulkWrite(batchData);
     System.out.println(bulkWriteResult.toString());
   }
 
@@ -157,24 +176,17 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
 
   /**
    * get batch data
-   * @param dpSinkRecord
-   * @param collection
-   * @param requests
+   * @param type
    * @throws JSONException
    */
-  private void getBatchData(DpSinkRecord dpSinkRecord, MongoCollection<Document> collection, List<WriteModel<Document>> requests) throws JSONException {
-    JSONObject jsonObj = dpSinkRecord.getDataJson();
-    PrimaryKey primaryKey = dpSinkRecord.getPrimaryKeys();
-    List<ImmutablePair<String, Object>> primaryKeys = primaryKey.getPrimaryKeys();
-    for (ImmutablePair<String, Object> immutablePair : primaryKeys) {
-      Document documentOne = collection.find(eq(immutablePair.getKey(), immutablePair.getValue())).first();
-      if(null != documentOne && documentOne.size() > 0){
-        UpdateOneModel iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(jsonObj)));
-        requests.add(iom);
-      }else{
-        InsertOneModel<Document> iom = new InsertOneModel<>(getDocument(jsonObj));
-        requests.add(iom);
-      }
+  private WriteModel<Document> getBatchData(String type, ImmutablePair<String, Object> immutablePair, JSONObject dataJson) throws JSONException {
+    WriteModel<Document> iom = null;
+    if(StringUtils.equals("U", type)){
+      iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(dataJson)));
     }
+    if(StringUtils.equals("I", type)){
+      iom = new InsertOneModel<>(getDocument(dataJson));
+    }
+    return iom;
   }
 }
