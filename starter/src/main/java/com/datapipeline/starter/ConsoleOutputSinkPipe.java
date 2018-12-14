@@ -21,39 +21,39 @@ public class ConsoleOutputSinkPipe extends DpSinkPipe {
 
   @Override
   public void handleSchemaChange(ConnectSchema lastSchema, ConnectSchema currSchema, String
-          dpSchemaName, PrimaryKey primaryKey, boolean shouldStageData) {
+      dpSchemaName, PrimaryKey primaryKey, boolean shouldStageData) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Schema change of " +
-            dpSchemaName);
+        dpSchemaName);
     System.out.println("New schema has fields as " + currSchema.fields().stream().map
-            (Field::name).collect(Collectors.joining(", ")));
+        (Field::name).collect(Collectors.joining(", ")));
   }
 
   @Override
   public void handleDelete(MemoryBatchMessage msg, String dpSchemaName) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Data deletion of " +
-            dpSchemaName);
+        dpSchemaName);
     System.out.println("Primary keys of the deletion are " + msg.getDpSinkRecords().keySet()
-            .stream().map(pk -> "'" + pk.getCompositeValue() + "'").collect(Collectors.joining(", ")));
+        .stream().map(pk -> "'" + pk.getCompositeValue() + "'").collect(Collectors.joining(", ")));
   }
 
   @Override
   public void handleInsert(MemoryBatchMessage msg, String dpSchemaName, boolean shouldStageData) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Data insertion of " +
-            dpSchemaName + ", should staging data ? " + shouldStageData);
+        dpSchemaName + ", should staging data ? " + shouldStageData);
     msg.getDpSinkRecords().values().forEach(dpSinkRecord -> System.out.println("Insert " +
-            dpSinkRecord.getDataJson()));
+        dpSinkRecord.getDataJson()));
   }
 
   @Override
   public void handleSnapshotStart(String dpSchemaName, PrimaryKey primaryKey, ConnectSchema
-          sinkSchema) {
+      sinkSchema) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Snapshot start of " +
-            dpSchemaName);
+        dpSchemaName);
   }
 
   @Override
   public void handleSnapshotDone(String dpSchemaName, PrimaryKey primaryKey) {
     System.out.println("dptask#" + getContext().getDpTaskId() + " Snapshot done of " +
-            dpSchemaName);
+        dpSchemaName);
   }
 }
