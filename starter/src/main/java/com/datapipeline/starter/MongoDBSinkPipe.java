@@ -3,14 +3,11 @@ package com.datapipeline.starter;
 import com.datapipeline.base.connector.sink.pipe.message.MemoryBatchMessage;
 import com.datapipeline.clients.connector.schema.base.DpSinkRecord;
 import com.datapipeline.clients.connector.schema.base.PrimaryKey;
-import com.datapipeline.clients.record.DpRecordMessageType;
 import com.datapipeline.mongodb.MongoDBHelper;
 import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
-import com.mongodb.client.model.InsertOneModel;
-import com.mongodb.client.model.UpdateOneModel;
-import com.mongodb.client.model.WriteModel;
+import com.mongodb.client.model.*;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kafka.connect.data.ConnectSchema;
@@ -18,6 +15,8 @@ import org.apache.kafka.connect.data.Field;
 import org.bson.Document;
 import org.codehaus.jettison.json.JSONException;
 import org.codehaus.jettison.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
 import java.util.*;
@@ -27,16 +26,21 @@ import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Filters.exists;
 
 public class MongoDBSinkPipe extends DpSinkPipe {
+
+    private Logger logger = LoggerFactory.getLogger(MongoDBSinkPipe.class);
+
     @Override
     public void init(Map<String, String> config) {
-        config.forEach((k, v) -> System.out.println("Key: " + k + " / Value: " + v));
         if(StringUtils.isEmpty(config.get("dbname"))){
+            logger.info("MongoDB dbname not empty");
             throw new RuntimeException("MongoDB dbname not empty");
         }
         if(StringUtils.isEmpty(config.get("host"))){
+            logger.info("MongoDB host not empty");
             throw new RuntimeException("MongoDB host not empty");
         }
         if(StringUtils.isEmpty(config.get("port"))){
+            logger.info("MongoDB port not empty");
             throw new RuntimeException("MongoDB port not empty");
         }
         MongoDBHelper.INSTANCE.createMongoClient(config.get("dbname"), config.get("host"), Integer.valueOf(config.get("port")));
@@ -44,33 +48,34 @@ public class MongoDBSinkPipe extends DpSinkPipe {
 
     @Override
     public void onStopped() {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Pipe stopped.");
+        logger.info("close mongo client");
         MongoDBHelper.INSTANCE.closeMongoClient();
     }
 
     @Override
     public void handleSchemaChange(ConnectSchema lastSchema, ConnectSchema currSchema, String dpSchemaName, PrimaryKey primaryKey, boolean shouldStageData) {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Schema change of " + dpSchemaName);
-        System.out.println("New schema has fields as " + currSchema.fields().stream().map(Field::name).collect(Collectors.joining(", ")));
 
         if(null != lastSchema && null != currSchema){
-            String lastStr = lastSchema.fields().stream().map(Field::name).collect(Collectors.joining(","));
-            String currStr = currSchema.fields().stream().map(Field::name).collect(Collectors.joining(","));
-            String[] lastStrArray = lastStr.split(",");
-            String[] currStrArray = currStr.split(",");
-            if(lastStrArray.length != currStrArray.length){
-                MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
-                if(currStrArray.length > lastStrArray.length){
-                    Set<String> diffElem = getDifferentElements(lastStrArray, currStrArray);
-                    for (String str : diffElem) {
-                        collection.updateMany(exists(str, false), new Document("$set", new Document(str,null)));
-                    }
+            Object[] lastStrArray = lastSchema.fields().stream().map(Field::name).toArray();
+            Object[] currStrArray = currSchema.fields().stream().map(Field::name).toArray();
+            MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
+            if(currStrArray.length > lastStrArray.length){
+                Set<Object> diffElem = getDifferentElements(lastStrArray, currStrArray);
+                for (Object str : diffElem) {
+                    collection.updateMany(exists(String.valueOf(str), false), new Document("$set", new Document(String.valueOf(str),null)));
                 }
-                if(currStrArray.length < lastStrArray.length){
-                    Set<String> diffElem = getDifferentElements(currStrArray, lastStrArray);
-                    for (String str : diffElem) {
-                        collection.updateMany(exists(str, true), new Document("$unset", new Document(str,"")));
-                    }
+            }
+            if(currStrArray.length < lastStrArray.length){
+                Set<Object> diffElem = getDifferentElements(currStrArray, lastStrArray);
+                for (Object str : diffElem) {
+                    collection.updateMany(exists(String.valueOf(str), true), new Document("$unset", new Document(String.valueOf(str),"")));
+                }
+            }
+            if(currStrArray.length == lastStrArray.length){
+                Set<Object> diffElem = getDifferentElements(lastStrArray, currStrArray);
+                for (Object str : diffElem) {
+                    String[] strArray = String.valueOf(str).split(",");
+                    collection.updateMany(exists(strArray[0], true), new Document("$rename", new Document(strArray[0], strArray[1])));
                 }
             }
         }
@@ -78,55 +83,50 @@ public class MongoDBSinkPipe extends DpSinkPipe {
 
     @Override
     public void handleDelete(MemoryBatchMessage msg, String dpSchemaName) {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Data deletion of " + dpSchemaName);
-        System.out.println("Primary keys of the deletion are " + msg.getDpSinkRecords().keySet().stream().map(pk -> "'" + pk.getCompositeValue() + "'").collect(Collectors.joining(", ")));
+        logger.info("dptask#" + getContext().getDpTaskId() + " Data deletion of " + dpSchemaName);
+        logger.info("Primary keys of the deletion are " + msg.getDpSinkRecords().keySet().stream().map(pk -> "'" + pk.getCompositeValue() + "'").collect(Collectors.joining(", ")));
+        MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
+        List<WriteModel<Document>> batchData = new ArrayList<>(msg.getDpSinkRecords().size());
+        Set<PrimaryKey> primaryKeys = msg.getDpSinkRecords().keySet();
+        for (PrimaryKey primaryKey : primaryKeys) {
+            ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
+            WriteModel<Document> iom = new DeleteOneModel(eq(immutablePair.getKey(), immutablePair.getValue()));
+            batchData.add(iom);
+        }
+        BulkWriteResult bulkWriteResult = collection.bulkWrite(batchData);
+        logger.info(bulkWriteResult.toString());
     }
 
     @Override
     public void handleInsert(MemoryBatchMessage msg, String dpSchemaName, boolean shouldStageData) {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Data insertion of " + dpSchemaName + ", should staging data ? " + shouldStageData);
-        msg.getDpSinkRecords().values().forEach(dpSinkRecord -> System.out.println("Insert " + dpSinkRecord.getDataJson()));
-
-        // 得到mongodb集合
         MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
-        // 定义批量提交batchData
         List<WriteModel<Document>> batchData = new ArrayList<>(msg.getDpSinkRecords().size());
-        // 获取数据类型（I:插入，U:更新）
-        String type = msg.getBatchMeta().getMessageType().getType();
-        // 循环放入批量提交集合requests
         Collection<DpSinkRecord> dpSinkRecords = msg.getDpSinkRecords().values();
         for (DpSinkRecord dpSinkRecord : dpSinkRecords) {
             try {
                 PrimaryKey primaryKey = dpSinkRecord.getPrimaryKeys();
                 ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
                 JSONObject dataJson = dpSinkRecord.getDataJson();
-                // 数据去重
-                if (StringUtils.equals(DpRecordMessageType.INSERT.getType(), type)) {
-                    Document document = collection.find(eq(immutablePair.getKey(), immutablePair.getValue())).first();
-                    if (null != document && document.size() > 0) {
-                        continue;
-                    }
-                }
-                // 获取批量写入对象
-                WriteModel<Document> iom = getBatchData(type, immutablePair, dataJson);
+                UpdateOptions updateOptions = new UpdateOptions();
+                updateOptions.upsert(true);
+                WriteModel<Document> iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(dataJson)), updateOptions);
                 batchData.add(iom);
             } catch (JSONException e) {
                 throw new RuntimeException("Data type conversion error");
             }
         }
-        // 执行批量提交
         BulkWriteResult bulkWriteResult = collection.bulkWrite(batchData);
-        System.out.println(bulkWriteResult.toString());
+        logger.info(bulkWriteResult.toString());
     }
 
     @Override
     public void handleSnapshotStart(String dpSchemaName, PrimaryKey primaryKey, ConnectSchema sinkSchema) {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Snapshot start of " + dpSchemaName);
+        logger.info("dptask#" + getContext().getDpTaskId() + " Snapshot start of " + dpSchemaName);
     }
 
     @Override
     public void handleSnapshotDone(String dpSchemaName, PrimaryKey primaryKey) {
-        System.out.println("dptask#" + getContext().getDpTaskId() + " Snapshot done of " + dpSchemaName);
+        logger.info("dptask#" + getContext().getDpTaskId() + " Snapshot done of " + dpSchemaName);
     }
 
     /**
@@ -155,33 +155,29 @@ public class MongoDBSinkPipe extends DpSinkPipe {
      * @param large large array
      * @return
      */
-    private Set<String> getDifferentElements(String[] small, String[] large){
-        Set<String> same = new HashSet<>();
-        Set<String> temp = new HashSet<>();
-        for (int i = 0; i < small.length; i++) {
-            temp.add(small[i]);
-        }
-        for (int j = 0; j < large.length; j++) {
-            if(temp.add(large[j])) {
-                same.add(large[j].trim());
+    private Set<Object> getDifferentElements(Object[] small, Object[] large){
+        Set<Object> same = new HashSet<>();
+        Set<Object> temp = new HashSet<>();
+
+        if(small.length == large.length){
+            for (int i = 0; i < small.length; i++) {
+                Object sm = small[i];
+                Object lg = large[i];
+                if(!sm.equals(lg)){
+                    same.add(sm+","+lg);
+                }
+            }
+        }else {
+            for (int i = 0; i < small.length; i++) {
+                temp.add(small[i]);
+            }
+            for (int j = 0; j < large.length; j++) {
+                if (temp.add(large[j])) {
+                    same.add(large[j]);
+                }
             }
         }
         return same;
     }
 
-    /**
-     * get batch data
-     * @param type
-     * @throws JSONException
-     */
-    private WriteModel<Document> getBatchData(String type, ImmutablePair<String, Object> immutablePair, JSONObject dataJson) throws JSONException {
-        WriteModel<Document> iom = null;
-        if(StringUtils.equals(DpRecordMessageType.UPDATE.getType(), type)){
-            iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(dataJson)));
-        }
-        if(StringUtils.equals(DpRecordMessageType.INSERT.getType(), type)){
-            iom = new InsertOneModel<>(getDocument(dataJson));
-        }
-        return iom;
-    }
 }
