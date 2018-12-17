@@ -3,6 +3,7 @@ package com.datapipeline.starter;
 import com.datapipeline.base.connector.sink.pipe.message.MemoryBatchMessage;
 import com.datapipeline.clients.connector.schema.base.DpSinkRecord;
 import com.datapipeline.clients.connector.schema.base.PrimaryKey;
+import com.datapipeline.clients.record.DpRecordMessageType;
 import com.datapipeline.mongodb.MongoDBHelper;
 import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 import com.mongodb.bulk.BulkWriteResult;
@@ -100,7 +101,7 @@ public class MongoDBSinkPipe extends DpSinkPipe {
                 ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
                 JSONObject dataJson = dpSinkRecord.getDataJson();
                 // 数据去重
-                if (StringUtils.equals("I", type)) {
+                if (StringUtils.equals(DpRecordMessageType.INSERT.getType(), type)) {
                     Document document = collection.find(eq(immutablePair.getKey(), immutablePair.getValue())).first();
                     if (null != document && document.size() > 0) {
                         continue;
@@ -175,10 +176,10 @@ public class MongoDBSinkPipe extends DpSinkPipe {
      */
     private WriteModel<Document> getBatchData(String type, ImmutablePair<String, Object> immutablePair, JSONObject dataJson) throws JSONException {
         WriteModel<Document> iom = null;
-        if(StringUtils.equals("U", type)){
+        if(StringUtils.equals(DpRecordMessageType.UPDATE.getType(), type)){
             iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(dataJson)));
         }
-        if(StringUtils.equals("I", type)){
+        if(StringUtils.equals(DpRecordMessageType.INSERT.getType(), type)){
             iom = new InsertOneModel<>(getDocument(dataJson));
         }
         return iom;
