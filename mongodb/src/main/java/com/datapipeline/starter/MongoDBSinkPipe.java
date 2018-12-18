@@ -8,6 +8,7 @@ import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.*;
+import com.mongodb.client.result.DeleteResult;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kafka.connect.data.ConnectSchema;
@@ -28,6 +29,8 @@ import static com.mongodb.client.model.Filters.exists;
 public class MongoDBSinkPipe extends DpSinkPipe {
 
     private Logger logger = LoggerFactory.getLogger(MongoDBSinkPipe.class);
+
+    private static Map<String, String> map = new HashMap<>();
 
     @Override
     public void init(Map<String, String> config) {
@@ -88,17 +91,22 @@ public class MongoDBSinkPipe extends DpSinkPipe {
             try {
                 PrimaryKey primaryKey = dpSinkRecord.getPrimaryKeys();
                 ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
+                if(null == map.get(immutablePair.getKey())){
+                    String index = collection.createIndex(new Document(immutablePair.getKey(), 1));
+                    map.put(immutablePair.getKey(), immutablePair.getKey());
+                    logger.info(index);
+                }
                 JSONObject dataJson = dpSinkRecord.getDataJson();
                 UpdateOptions updateOptions = new UpdateOptions();
                 updateOptions.upsert(true);
                 WriteModel<Document> iom = new UpdateOneModel(eq(immutablePair.getKey(), immutablePair.getValue()), new Document("$set", getDocument(dataJson)), updateOptions);
                 batchData.add(iom);
-            } catch (JSONException e) {
+            } catch (Exception e) {
                 throw new RuntimeException("Data type conversion error");
             }
         }
-        BulkWriteResult bulkWriteResult = collection.bulkWrite(batchData);
-        logger.info(bulkWriteResult.toString());
+
+        BulkWriteResult result = collection.bulkWrite(batchData);
     }
 
     @Override
