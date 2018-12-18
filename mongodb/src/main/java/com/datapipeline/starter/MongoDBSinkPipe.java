@@ -148,11 +148,11 @@ public class MongoDBSinkPipe extends DpSinkPipe {
                 }
             }
         }
-        for (Object str1 : lastArray){
-            lastTempSet.add(str1);
+        for (Object lastObj : lastArray){
+            lastTempSet.add(lastObj);
         }
-        for (Object str2 : currArray){
-            currTempSet.add(str2);
+        for (Object currObj : currArray){
+            currTempSet.add(currObj);
         }
         lastTempSet.removeAll(tempSet);
         currTempSet.removeAll(tempSet);
