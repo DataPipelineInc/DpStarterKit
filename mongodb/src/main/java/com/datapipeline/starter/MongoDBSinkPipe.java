@@ -92,7 +92,7 @@ public class MongoDBSinkPipe extends DpSinkPipe {
                 ImmutablePair<String, Object> immutablePair = primaryKey.getPrimaryKeys().get(0);
                 if(null == map.get(immutablePair.getKey())){
                     String index = collection.createIndex(new Document(immutablePair.getKey(), 1));
-                    map.put(immutablePair.getKey(), immutablePair.getKey());
+                    map.put(immutablePair.getKey(), index);
                     logger.info(index);
                 }
                 JSONObject dataJson = dpSinkRecord.getDataJson();
