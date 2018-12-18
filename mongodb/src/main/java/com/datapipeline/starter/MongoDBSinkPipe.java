@@ -56,28 +56,10 @@ public class MongoDBSinkPipe extends DpSinkPipe {
     public void handleSchemaChange(ConnectSchema lastSchema, ConnectSchema currSchema, String dpSchemaName, PrimaryKey primaryKey, boolean shouldStageData) {
 
         if(null != lastSchema && null != currSchema){
-            Object[] lastStrArray = lastSchema.fields().stream().map(Field::name).toArray();
-            Object[] currStrArray = currSchema.fields().stream().map(Field::name).toArray();
+            Object[] lastArray = lastSchema.fields().stream().map(Field::name).toArray();
+            Object[] currArray = currSchema.fields().stream().map(Field::name).toArray();
             MongoCollection<Document> collection = MongoDBHelper.INSTANCE.getCollection(dpSchemaName);
-            if(currStrArray.length > lastStrArray.length){
-                Set<Object> diffElem = getDifferentElements(lastStrArray, currStrArray);
-                for (Object str : diffElem) {
-                    collection.updateMany(exists(String.valueOf(str), false), new Document("$set", new Document(String.valueOf(str),null)));
-                }
-            }
-            if(currStrArray.length < lastStrArray.length){
-                Set<Object> diffElem = getDifferentElements(currStrArray, lastStrArray);
-                for (Object str : diffElem) {
-                    collection.updateMany(exists(String.valueOf(str), true), new Document("$unset", new Document(String.valueOf(str),"")));
-                }
-            }
-            if(currStrArray.length == lastStrArray.length){
-                Set<Object> diffElem = getDifferentElements(lastStrArray, currStrArray);
-                for (Object str : diffElem) {
-                    String[] strArray = String.valueOf(str).split(",");
-                    collection.updateMany(exists(strArray[0], true), new Document("$rename", new Document(strArray[0], strArray[1])));
-                }
-            }
+            fieldSync(lastArray, currArray, collection);
         }
     }
 
@@ -150,34 +132,36 @@ public class MongoDBSinkPipe extends DpSinkPipe {
     }
 
     /**
-     * Get two different elements of an array
-     * @param small Small array
-     * @param large large array
-     * @return
+     * Field synchronization
+     * @param lastArray last Array
+     * @param currArray curr Array
+     * @param collection mongodb collection
      */
-    private Set<Object> getDifferentElements(Object[] small, Object[] large){
-        Set<Object> same = new HashSet<>();
-        Set<Object> temp = new HashSet<>();
-
-        if(small.length == large.length){
-            for (int i = 0; i < small.length; i++) {
-                Object sm = small[i];
-                Object lg = large[i];
-                if(!sm.equals(lg)){
-                    same.add(sm+","+lg);
-                }
-            }
-        }else {
-            for (int i = 0; i < small.length; i++) {
-                temp.add(small[i]);
-            }
-            for (int j = 0; j < large.length; j++) {
-                if (temp.add(large[j])) {
-                    same.add(large[j]);
+    private void fieldSync(Object[] lastArray, Object[] currArray, MongoCollection<Document> collection){
+        Set<Object> tempSet = new HashSet<>();
+        Set<Object> lastTempSet = new HashSet<>();
+        Set<Object> currTempSet = new HashSet<>();
+        for(Object lastObj : lastArray){
+            for(Object currObj : currArray){
+                if(lastObj.equals(currObj)){
+                    tempSet.add(currObj);
                 }
             }
         }
-        return same;
+        for (Object str1 : lastArray){
+            lastTempSet.add(str1);
+        }
+        for (Object str2 : currArray){
+            currTempSet.add(str2);
+        }
+        lastTempSet.removeAll(tempSet);
+        currTempSet.removeAll(tempSet);
+        for(Object lastTemp : lastTempSet){
+            collection.updateMany(exists(String.valueOf(lastTemp), true), new Document("$unset", new Document(String.valueOf(lastTemp),"")));
+        }
+        for (Object currTemp : currTempSet){
+            collection.updateMany(exists(String.valueOf(currTemp), false), new Document("$set", new Document(String.valueOf(currTemp),null)));
+        }
     }
 
 }
