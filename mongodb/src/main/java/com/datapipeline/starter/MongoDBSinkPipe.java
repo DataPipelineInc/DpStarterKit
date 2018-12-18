@@ -8,7 +8,6 @@ import com.datapipeline.sink.connector.starterkit.DpSinkPipe;
 import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.*;
-import com.mongodb.client.result.DeleteResult;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.tuple.ImmutablePair;
 import org.apache.kafka.connect.data.ConnectSchema;
