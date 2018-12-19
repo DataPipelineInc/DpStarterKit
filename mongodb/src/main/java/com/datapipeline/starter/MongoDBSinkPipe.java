@@ -125,7 +125,7 @@ public class MongoDBSinkPipe extends DpSinkPipe {
      * @throws JSONException
      */
     private Document getDocument(JSONObject jsonObj) throws JSONException {
-        Document document = new Document();
+        /*Document document = new Document();
         Iterator iterator = jsonObj.keys();
         while (iterator.hasNext()) {
             String key = iterator.next().toString();
@@ -134,7 +134,8 @@ public class MongoDBSinkPipe extends DpSinkPipe {
                 obj = obj.toString();
             }
             document.put(key, obj);
-        }
+        }*/
+        Document document = Document.parse(jsonObj.toString());
         return document;
     }
 
