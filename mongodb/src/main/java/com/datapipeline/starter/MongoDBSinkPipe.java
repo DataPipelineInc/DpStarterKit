@@ -104,8 +104,8 @@ public class MongoDBSinkPipe extends DpSinkPipe {
                 throw new RuntimeException("Data type conversion error");
             }
         }
-
         BulkWriteResult result = collection.bulkWrite(batchData);
+        logger.info(result.toString());
     }
 
     @Override
