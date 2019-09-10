@@ -57,11 +57,6 @@
       <artifactId>mongo-java-driver</artifactId>
     </dependency>
     <dependency>
-      <groupId>com.moka.function</groupId>
-      <artifactId>moka-function</artifactId>
-      <version>1.0.0</version>
-    </dependency>
-    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-csv</artifactId>
       <version>1.2</version>
