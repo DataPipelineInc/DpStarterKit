@@ -448,18 +448,23 @@ public class MokaMysqlSinkPipe extends DpSinkPipe {
       String schemaFieldType = map.get(columnName).getSinkSchemaField().getSchemaFieldType();
       schemaFieldType = schemaFieldType.replaceAll("\\(.*?\\)", "");
       switch (schemaFieldType) {
+        case "tinyint unsigned zerofill":
         case "tinyint unsigned":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("TINYINT_UNSIGNED");
           break;
+        case "smallint unsigned zerofill":
         case "smallint unsigned":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("SMALLINT_UNSIGNED");
           break;
+        case "mediumint unsigned zerofill":
         case "mediumint unsigned":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("MEDIUMINT_UNSIGNED");
           break;
+        case "bigint unsigned zerofill":
         case "bigint unsigned":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("BIGINT_UNSIGNED");
           break;
+        case "int unsigned zerofill":
         case "int unsigned":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("INTEGER_UNSIGNED");
           break;
@@ -468,6 +473,9 @@ public class MokaMysqlSinkPipe extends DpSinkPipe {
           break;
         case "bigint":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("BIGINT");
+          break;
+        case "mediumint":
+          map.get(columnName).getSinkSchemaField().setSchemaFieldType("MEDIUMINT");
           break;
         case "smallint":
           map.get(columnName).getSinkSchemaField().setSchemaFieldType("SMALLINT");
